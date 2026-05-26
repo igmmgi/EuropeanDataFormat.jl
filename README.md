@@ -22,7 +22,7 @@ When reading files with mixed sampling rates, the package automatically upsample
 ```julia
 ] # julia pkg manager
 add EuropeanDataFormat
-add https://github.com/igmmgi/EuropeanDataFormat.jl.git # install from  GitHub
+# add https://github.com/igmmgi/EuropeanDataFormat.jl.git # install from  GitHub
 test EuropeanDataFormat # optional
 ```
 
