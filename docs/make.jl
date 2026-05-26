@@ -15,15 +15,13 @@ makedocs(
   pages=[
     "Home" => "index.md",
     "API Reference" => "api.md",
-  ],
-
-  doctest=true,
+  ], doctest=true,
   checkdocs=:exports,
 )
 
 deploydocs(;
-    repo = "github.com/igmmgi/EuropeanDataFormat.jl.git",
-    devbranch = "main",
-    versions = ["stable" => "v^", "v#.#", "dev" => "main"],
-    push_preview = true,
+  repo="github.com/igmmgi/EuropeanDataFormat.jl.git",
+  devbranch="main",
+  versions=["stable" => "v^", "v#.#", "dev" => "main"],
+  push_preview=true,
 )
