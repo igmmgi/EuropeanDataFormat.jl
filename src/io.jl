@@ -54,6 +54,7 @@ dat = read_edf("data.edf", channels=[1, "Fp1", -1])
 - Data is automatically scaled using header calibration information
 - Trigger information is extracted from the status channel
 - File format follows [EDF EDF specification](https://www.edf.com/faq_file_format.htm)
+- The EDF/EDF+ specification allows different channels to have different sampling rates. When reading files with mixed sampling rates, the package automatically upsamples slower channels to match the highest sampling rate in the file.
 
 # See also
 - `write_edf`: Write data back to EDF format

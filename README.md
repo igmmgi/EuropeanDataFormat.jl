@@ -12,10 +12,6 @@ Julia code for European Data Format (EDF/EDF+) EEG files. See [edfplus.info](htt
 - selecting/reducing the number of channels
 - writing a Julia data struct to a edf fileformat
 
-## Handling Mixed Sampling Rates
-
-The EDF/EDF+ specification allows different channels to have different sampling rates.
-When reading files with mixed sampling rates, the package automatically upsamples slower channels to match the highest sampling rate in the file.
 
 ## Installation
 
