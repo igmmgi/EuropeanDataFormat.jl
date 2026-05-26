@@ -23,6 +23,7 @@ makedocs(
 
 deploydocs(;
     repo = "github.com/igmmgi/EuropeanDataFormat.jl.git",
-    versions = ["stable" => "v^", "v#.#", "dev" => "master"],
+    devbranch = "main",
+    versions = ["stable" => "v^", "v#.#", "dev" => "main"],
     push_preview = true,
 )
