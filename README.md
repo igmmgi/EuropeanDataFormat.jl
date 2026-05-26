@@ -46,3 +46,4 @@ dat3 = merge_edf([dat1, dat2])
 write_edf(dat3, "filename3.edf")
 
 ```
+ 
