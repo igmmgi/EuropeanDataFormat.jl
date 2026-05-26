@@ -14,8 +14,7 @@ Julia code for European Data Format (EDF/EDF+) EEG files. See [edfplus.info](htt
 
 ## Handling Mixed Sampling Rates
 
-The EDF/EDF+ specification allows different channels to have different sampling rates. `EuropeanDataFormat.jl` is specifically designed to provide a seamless data science experience by returning a dense, mathematically aligned `Matrix{Float32}` for analysis.
-
+The EDF/EDF+ specification allows different channels to have different sampling rates.
 When reading files with mixed sampling rates, the package automatically upsamples slower channels to match the highest sampling rate in the file.
 
 ## Installation
