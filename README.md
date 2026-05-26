@@ -1,8 +1,8 @@
 # EuropeanDataFormat
 
 [![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://igmmgi.github.io/EuropeanDataFormat.jl/)
-[![Build Status](https://github.com/igmmgi/EuropeanDataFormat/workflows/Documentation/badge.svg)](https://github.com/igmmgi/EuropeanDataFormat/actions)
-[![CI](https://github.com/igmmgi/EuropeanDataFormat/workflows/Tests/badge.svg)](https://github.com/igmmgi/EuropeanDataFormat/actions)
+[![Build Status](https://github.com/igmmgi/EuropeanDataFormat.jl/workflows/Documentation/badge.svg)](https://github.com/igmmgi/EuropeanDataFormat.jl/actions)
+[![CI](https://github.com/igmmgi/EuropeanDataFormat.jl/workflows/Tests/badge.svg)](https://github.com/igmmgi/EuropeanDataFormat.jl/actions)
 
 Julia code for European Data Format (EDF/EDF+) EEG files. See [edfplus.info](https://www.edfplus.info/) for more information about the format. The code can be used for:
 
