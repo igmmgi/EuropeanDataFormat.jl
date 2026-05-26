@@ -6,7 +6,6 @@
 
 Julia code for European Data Format (EDF/EDF+) EEG files. See [edfplus.info](https://www.edfplus.info/) for more information about the format. The code can be used for:
 
-
 - reading files into Julia data struct
 - cropping file length
 - reducing the sample rate
