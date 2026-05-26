@@ -1,0 +1,49 @@
+# EuropeanDataFormat
+
+[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://igmmgi.github.io/EuropeanDataFormat.jl/)
+[![Build Status](https://github.com/igmmgi/EuropeanDataFormat/workflows/Documentation/badge.svg)](https://github.com/igmmgi/EuropeanDataFormat/actions)
+[![CI](https://github.com/igmmgi/EuropeanDataFormat/workflows/Tests/badge.svg)](https://github.com/igmmgi/EuropeanDataFormat/actions)
+
+Julia code for European Data Format (EDF/EDF+) EEG files. See [edfplus.info](https://www.edfplus.info/) for more information about the format. The code can be used for:
+
+- reading files into Julia data struct
+- cropping file length
+- reducing the sample rate
+- selecting/reducing the number of channels
+- writing a Julia data struct to a edf fileformat
+
+## Handling Mixed Sampling Rates
+
+The EDF/EDF+ specification allows different channels to have different sampling rates. `EuropeanDataFormat.jl` is specifically designed to provide a seamless data science experience by returning a dense, mathematically aligned `Matrix{Float32}` for analysis.
+
+When reading files with mixed sampling rates, the package automatically upsamples slower channels to match the highest sampling rate in the file.
+
+## Installation
+
+```julia
+] # julia pkg manager
+add EuropeanDataFormat
+add https://github.com/igmmgi/EuropeanDataFormat.jl.git # install from  GitHub
+test EuropeanDataFormat # optional
+```
+
+## Functions
+
+- crop_edf
+- downsample_edf
+- merge_edf
+- select_channels_edf
+- read_edf
+- write_edf
+
+## Basic Example
+
+```julia
+using EuropeanDataFormat
+
+dat1 = read_edf("filename1.edf")
+dat2 = read_edf("filename2.edf")
+dat3 = merge_edf([dat1, dat2])
+write_edf(dat3, "filename3.edf")
+
+```
