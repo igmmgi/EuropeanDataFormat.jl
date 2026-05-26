@@ -23,7 +23,7 @@ When reading files with mixed sampling rates, the package automatically upsample
 ] # julia pkg manager
 add EuropeanDataFormat
 # add https://github.com/igmmgi/EuropeanDataFormat.jl.git # install from  GitHub
-test EuropeanDataFormat # optional
+# test EuropeanDataFormat # optional
 ```
 
 ## Functions
@@ -46,4 +46,3 @@ dat3 = merge_edf([dat1, dat2])
 write_edf(dat3, "filename3.edf")
 
 ```
- 
