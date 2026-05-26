@@ -75,8 +75,3 @@ EuropeanDataFormat.delete_channels_edf
 EuropeanDataFormat.delete_channels_edf!
 ```
 
-### Channel Utilities
-
-```@docs
-EuropeanDataFormat.channel_index
-```
