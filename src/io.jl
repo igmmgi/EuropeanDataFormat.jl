@@ -61,7 +61,7 @@ dat = read_edf("data.edf", channels=[1, "Fp1", -1])
 - `crop_edf`: Reduce data length
 - `select_channels_edf`: Select channels after reading
 """
-function read_edf(filename::String; header_only::Bool=false, channels=[])
+function read_edf(filename::AbstractString; header_only::Bool=false, channels=[])
 
   @info "Reading file: $filename"
   if !isfile(filename)
@@ -124,30 +124,7 @@ end
 """
     write_edf(edf_in, filename="")
 
-Write EDF EDF data structure to a EDF file.
-
-# Arguments
-- `edf_in::EdfData`: Data structure to write
-- `filename::String=""`: Output filename. If empty, uses `edf_in.filename`
-
-# File Format
-Writes data in EDF 16-bit format with:
-- 256-byte header containing metadata
-- 16-bit data samples for each channel
-- Status channel as the last channel
-- Proper scaling and calibration information
-
-# Header Information
-The header includes:
-- File identification and metadata
-- Channel information (labels, units, ranges)
-- Sampling rate and data record information
-- Pre-filtering and transducer information
-
-# Examples
-```julia
-# Write to specified filename
-write_edf(dat, "output.edf")
+Write EDF data structure to an EDF file.
 
 # Arguments
 - `edf_in::EdfData`: Data structure to write
@@ -171,7 +148,7 @@ write_edf(dat_cropped, "cropped_data.edf")
 ```
 
 # Notes
-- Creates a new EDF file in standard EDF format
+- Creates a new EDF file in standard 16-bit EDF format
 - Automatically applies scale factors and converts to 16-bit format
 - Preserves all header information and metadata
 - If no filename is provided, uses the filename stored in the data structure
@@ -182,7 +159,7 @@ write_edf(dat_cropped, "cropped_data.edf")
 - `crop_edf`: Reduce data before writing
 - `select_channels_edf`: Select channels before writing
 """
-function write_edf(edf_in::EdfData, filename::String="")
+function write_edf(edf_in::EdfData, filename::AbstractString="")
 
   if isempty(filename)
     filename = edf_in.filename
@@ -262,7 +239,6 @@ function edf2matrix(edf, num_channels, channels, scale_factor, offset_factor, nu
   trig_chan = Vector{Int16}(undef, num_data_records * target_samples)
   status_chan = zeros(Int16, num_data_records * target_samples)
 
-  # Use Set for faster channel lookup
   # Use Set for faster channel lookup
   channels_set = Set(channels)
 

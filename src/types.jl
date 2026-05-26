@@ -36,7 +36,7 @@ Data structure containing EDF EDF file header information.
 - `start_date::String`: Recording start date (DD.MM.YYYY)
 - `start_time::String`: Recording start time (HH.MM.SS)
 - `num_bytes_header::Int`: Header size in bytes
-- `data_format::String`: Data format (typically "24BIT")
+- `data_format::String`: Data format identifier (e.g., "EDF+C" for continuous EDF+)
 - `num_data_records::Int`: Number of data records
 - `duration_data_records::Int`: Duration of each record in seconds
 - `num_channels::Int`: Number of channels (including status channel)

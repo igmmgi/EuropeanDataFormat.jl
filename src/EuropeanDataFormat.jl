@@ -40,7 +40,6 @@ This package is licensed under the MIT License.
 module EuropeanDataFormat
 
 using DSP
-using Logging
 using OrderedCollections
 
 # Include organized module files
@@ -50,6 +49,9 @@ include("channels.jl")
 include("io.jl")
 
 export
+  EdfData,
+  EdfHeader,
+  EdfTriggers,
   crop_edf!,
   crop_edf,
   delete_channels_edf!,

@@ -6,7 +6,6 @@ license = "MIT"
 
 [deps]
 DSP = "717857b8-e6f2-59f4-9121-6e50c889abd2"
-Logging = "56ddb016-857b-54e1-b83d-db4d58db5568"
 OrderedCollections = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
 
 [compat]
@@ -15,10 +14,7 @@ DSP = "0.8"
 OrderedCollections = "1.4"
 
 [extras]
-Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
-DocumenterTools = "35a29f4d-8980-5a13-9543-d66fff28ecb8"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
 test = ["Test"]
-docs = ["Documenter", "DocumenterTools"]

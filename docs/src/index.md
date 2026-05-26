@@ -1,10 +1,10 @@
 # EuropeanDataFormat
 
-A Julia package for reading, writing, and processing EDF 24-bit EEG data files (EDF format).
+A Julia package for reading, writing, and processing EDF/EDF+ EEG data files.
 
 ## Overview
 
-EDF EDF (EDF Data Format) files store 24-bit EEG data with metadata including channel information, sampling rates, and trigger events. This package provides comprehensive functionality to work with these files in Julia.
+EDF (European Data Format) files store 16-bit EEG data with metadata including channel information, sampling rates, and trigger events. This package provides comprehensive functionality to work with these files in Julia.
 
 ## Features
 

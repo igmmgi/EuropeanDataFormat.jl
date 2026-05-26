@@ -12,7 +12,6 @@ Julia code for European Data Format (EDF/EDF+) EEG files. See [edfplus.info](htt
 - selecting/reducing the number of channels
 - writing a Julia data struct to a edf fileformat
 
-
 ## Installation
 
 ```julia
