@@ -9,6 +9,11 @@ const cases = [
   ("test3.edf", 512, 6, (idx1=3, val1=11008, cnt255=5), (rows=3072, chans=139)),
 ]
 
+const extended_cases = [
+  ("test4.edf", 200, 18181, (363620, 37), (idx1=2, val1=12334)),
+  ("test5.edf", 200, 900, (180000, 15), nothing),
+]
+
 @testset "EuropeanDataFormat" begin
 
   @testset "read_edf (header + data + selections)" begin
@@ -153,7 +158,9 @@ const cases = [
       @test size(ds.data, 1) == div(size(dat.data, 1), dec)
       @test length(ds.time) == size(ds.data, 1)
       @test length(ds.triggers.raw) == size(ds.data, 1)
-      @test ds.triggers.idx[1] == round(Int, dat.triggers.idx[1] / dec)
+      if trig.idx1 > 0
+  @test ds.triggers.idx[1] == round(Int, dat.triggers.idx[1] / dec)
+end
     end
   end
 
@@ -537,21 +544,21 @@ const cases = [
       end
     end
   end
+
   @testset "Extended EDF file reading" begin
-    # test4.edf
-    dat4 = read_edf(testfile("test4.edf"))
-    @test dat4.header.sample_rate[1] == 200
-    @test dat4.header.num_data_records == 18181
-    @test size(dat4.data) == (363620, 37)
-    @test dat4.triggers.idx[1] == 2
-    @test dat4.triggers.val[1] == 12334
-    
-    # test5.edf (sub-second data records)
-    dat5 = read_edf(testfile("test5.edf"))
-    @test dat5.header.sample_rate[1] == 200
-    @test dat5.header.num_data_records == 900
-    @test size(dat5.data) == (180000, 15)
-    @test isempty(dat5.triggers.idx)
+    for (fname, sr, nrecs, sz, trig) in extended_cases
+      dat = read_edf(testfile(fname))
+      @test dat.header.sample_rate[1] == sr
+      @test dat.header.num_data_records == nrecs
+      @test size(dat.data) == sz
+      
+      if isnothing(trig)
+        @test isempty(dat.triggers.idx)
+      else
+        @test dat.triggers.idx[1] == trig.idx1
+        @test dat.triggers.val[1] == trig.val1
+      end
+    end
   end
 
 end
