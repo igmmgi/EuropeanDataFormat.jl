@@ -537,5 +537,21 @@ const cases = [
       end
     end
   end
+  @testset "Extended EDF file reading" begin
+    # test4.edf
+    dat4 = read_edf(testfile("test4.edf"))
+    @test dat4.header.sample_rate[1] == 200
+    @test dat4.header.num_data_records == 18181
+    @test size(dat4.data) == (363620, 37)
+    @test dat4.triggers.idx[1] == 2
+    @test dat4.triggers.val[1] == 12334
+    
+    # test5.edf (sub-second data records)
+    dat5 = read_edf(testfile("test5.edf"))
+    @test dat5.header.sample_rate[1] == 200
+    @test dat5.header.num_data_records == 900
+    @test size(dat5.data) == (180000, 15)
+    @test isempty(dat5.triggers.idx)
+  end
 
 end

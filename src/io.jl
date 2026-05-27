@@ -79,7 +79,7 @@ function read_edf(filename::AbstractString; header_only::Bool=false, channels=[]
   num_bytes_header = parse(Int, String(read!(fid, Array{UInt8}(undef, EDF_HEADER_SIZE_BYTES))))
   data_format = strip(String(read!(fid, Array{UInt8}(undef, EDF_DATA_FORMAT_BYTES))))
   num_data_records = parse(Int, String(read!(fid, Array{UInt8}(undef, EDF_RECORD_COUNT_BYTES))))
-  duration_data_records = parse(Int, String(read!(fid, Array{UInt8}(undef, EDF_DURATION_BYTES))))
+  duration_data_records = parse(Float64, String(read!(fid, Array{UInt8}(undef, EDF_DURATION_BYTES))))
   num_channels = parse(Int, String(read!(fid, Array{UInt8}(undef, EDF_CHANNEL_COUNT_BYTES))))
   channel_labels = [strip(String(read!(fid, Array{UInt8}(undef, EDF_CHANNEL_LABEL_BYTES)))) for _ in 1:num_channels]
   transducer_type = [strip(String(read!(fid, Array{UInt8}(undef, EDF_TRANSDUCER_BYTES)))) for _ in 1:num_channels]
@@ -93,7 +93,7 @@ function read_edf(filename::AbstractString; header_only::Bool=false, channels=[]
   reserved = [String(read!(fid, Array{UInt8}(undef, EDF_RESERVED_BYTES))) for _ in 1:num_channels]
   scale_factor = convert(Array{Float32}, ((physical_max .- physical_min) ./ (digital_max .- digital_min)))
   offset = convert(Array{Float32}, physical_max .- scale_factor .* digital_max)
-  sample_rate = convert(Array{Int}, num_samples ./ duration_data_records)
+  sample_rate = convert(Array{Int}, round.(Int, num_samples ./ duration_data_records))
 
   hd = EdfHeader(id1, id2, text1, text2, start_date, start_time, num_bytes_header, data_format,
     num_data_records, duration_data_records, num_channels, channel_labels, transducer_type,

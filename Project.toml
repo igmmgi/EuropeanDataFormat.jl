@@ -1,7 +1,7 @@
 name = "EuropeanDataFormat"
 uuid = "6e7d3c7c-811f-4696-823f-91ac5a3cab82"
 authors = ["igmmgi <ian.mackenzie@uni-tuebingen.de>, Carolin Dudschig <carolin.dudschig@uni-tuebingen.de"]
-version = "0.1.0"
+version = "0.1.1"
 license = "MIT"
 
 [deps]

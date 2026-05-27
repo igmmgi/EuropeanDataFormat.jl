@@ -38,7 +38,7 @@ Data structure containing EDF EDF file header information.
 - `num_bytes_header::Int`: Header size in bytes
 - `data_format::String`: Data format identifier (e.g., "EDF+C" for continuous EDF+)
 - `num_data_records::Int`: Number of data records
-- `duration_data_records::Int`: Duration of each record in seconds
+- `duration_data_records::Float64`: Duration of each record in seconds
 - `num_channels::Int`: Number of channels (including status channel)
 - `channel_labels::Vector{String}`: Channel names/labels
 - `transducer_type::Vector{String}`: Transducer type for each channel
@@ -69,7 +69,7 @@ mutable struct EdfHeader
   num_bytes_header::Int
   data_format::String
   num_data_records::Int
-  duration_data_records::Int
+  duration_data_records::Float64
   num_channels::Int
   channel_labels::Vector{String}
   transducer_type::Vector{String}
