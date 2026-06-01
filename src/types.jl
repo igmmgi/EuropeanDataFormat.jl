@@ -26,13 +26,13 @@ const EDF_STATUS_CHANNEL_OFFSET = 1  # Status channel is always last
 """
     EdfHeader
 
-Data structure containing EDF EDF file header information.
+Data structure containing EDF file header information.
 
 # Fields
 - `id1::Vector{UInt8}`: File identifier (first byte)
 - `id2::Vector{UInt8}`: File identifier (remaining bytes)
-- `text1::String`: Subject information
-- `text2::String`: Recording information
+- `text1::String`: Local patient identification (EDF spec: patient code, sex, birthdate, name)
+- `text2::String`: Local recording identification (EDF spec: startdate, admin code, technician, equipment)
 - `start_date::String`: Recording start date (DD.MM.YYYY)
 - `start_time::String`: Recording start time (HH.MM.SS)
 - `num_bytes_header::Int`: Header size in bytes
@@ -43,10 +43,10 @@ Data structure containing EDF EDF file header information.
 - `channel_labels::Vector{String}`: Channel names/labels
 - `transducer_type::Vector{String}`: Transducer type for each channel
 - `channel_unit::Vector{String}`: Physical units for each channel
-- `physical_min::Vector{Int}`: Physical minimum values
-- `physical_max::Vector{Int}`: Physical maximum values
-- `digital_min::Vector{Int}`: Digital minimum values
-- `digital_max::Vector{Int}`: Digital maximum values
+- `physical_min::Vector{Float32}`: Physical minimum values
+- `physical_max::Vector{Float32}`: Physical maximum values
+- `digital_min::Vector{Float32}`: Digital minimum values
+- `digital_max::Vector{Float32}`: Digital maximum values
 - `pre_filter::Vector{String}`: Pre-filtering information
 - `num_samples::Vector{Int}`: Number of samples per record per channel
 - `reserved::Vector{String}`: Reserved header space
@@ -114,7 +114,7 @@ end
 """
     EdfData
 
-Complete data structure containing EDF EDF file data and metadata.
+Complete data structure containing EDF file data and metadata.
 
 # Fields
 - `filename::String`: Source filename

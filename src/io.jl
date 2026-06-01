@@ -166,27 +166,27 @@ function write_edf(edf_in::EdfData, filename::AbstractString="")
   end
   fid = open(filename, "w")
 
-  [write(fid, UInt8(i)) for i in edf_in.header.id1]
-  [write(fid, UInt8(i)) for i in edf_in.header.id2]
-  [write(fid, UInt8(i)) for i in edf_in.header.text1]
-  [write(fid, UInt8(i)) for i in edf_in.header.text2]
-  [write(fid, UInt8(i)) for i in edf_in.header.start_date]
-  [write(fid, UInt8(i)) for i in edf_in.header.start_time]
-  [write(fid, UInt8(i)) for i in rpad(string(edf_in.header.num_bytes_header), EDF_HEADER_SIZE_BYTES)]
-  [write(fid, UInt8(i)) for i in rpad(edf_in.header.data_format, EDF_DATA_FORMAT_BYTES)]
-  [write(fid, UInt8(i)) for i in rpad(string(edf_in.header.num_data_records), EDF_RECORD_COUNT_BYTES)]
-  [write(fid, UInt8(i)) for i in rpad(string(edf_in.header.duration_data_records), EDF_DURATION_BYTES)]
-  [write(fid, UInt8(i)) for i in rpad(string(edf_in.header.num_channels), EDF_CHANNEL_COUNT_BYTES)]
-  [write(fid, UInt8(j)) for i in edf_in.header.channel_labels for j in rpad(i, EDF_CHANNEL_LABEL_BYTES)]
-  [write(fid, UInt8(j)) for i in edf_in.header.transducer_type for j in rpad(i, EDF_TRANSDUCER_BYTES)]
-  [write(fid, UInt8(j)) for i in edf_in.header.channel_unit for j in rpad(i, EDF_UNIT_BYTES)]
-  [write(fid, UInt8(j)) for i in edf_in.header.physical_min for j in rpad(i, EDF_VALUE_BYTES)]
-  [write(fid, UInt8(j)) for i in edf_in.header.physical_max for j in rpad(i, EDF_VALUE_BYTES)]
-  [write(fid, UInt8(j)) for i in edf_in.header.digital_min for j in rpad(i, EDF_VALUE_BYTES)]
-  [write(fid, UInt8(j)) for i in edf_in.header.digital_max for j in rpad(i, EDF_VALUE_BYTES)]
-  [write(fid, UInt8(j)) for i in edf_in.header.pre_filter for j in rpad(i, EDF_FILTER_BYTES)]
-  [write(fid, UInt8(j)) for i in edf_in.header.num_samples for j in rpad(i, EDF_SAMPLES_BYTES)]
-  [write(fid, UInt8(j)) for i in edf_in.header.reserved for j in rpad(i, EDF_RESERVED_BYTES)]
+  _write_bytes(fid, edf_in.header.id1)
+  _write_bytes(fid, edf_in.header.id2)
+  _write_bytes(fid, edf_in.header.text1)
+  _write_bytes(fid, edf_in.header.text2)
+  _write_bytes(fid, edf_in.header.start_date)
+  _write_bytes(fid, edf_in.header.start_time)
+  _write_bytes(fid, rpad(string(edf_in.header.num_bytes_header), EDF_HEADER_SIZE_BYTES))
+  _write_bytes(fid, rpad(edf_in.header.data_format, EDF_DATA_FORMAT_BYTES))
+  _write_bytes(fid, rpad(string(edf_in.header.num_data_records), EDF_RECORD_COUNT_BYTES))
+  _write_bytes(fid, rpad(string(edf_in.header.duration_data_records), EDF_DURATION_BYTES))
+  _write_bytes(fid, rpad(string(edf_in.header.num_channels), EDF_CHANNEL_COUNT_BYTES))
+  _write_padded(fid, edf_in.header.channel_labels, EDF_CHANNEL_LABEL_BYTES)
+  _write_padded(fid, edf_in.header.transducer_type, EDF_TRANSDUCER_BYTES)
+  _write_padded(fid, edf_in.header.channel_unit, EDF_UNIT_BYTES)
+  _write_padded(fid, edf_in.header.physical_min, EDF_VALUE_BYTES)
+  _write_padded(fid, edf_in.header.physical_max, EDF_VALUE_BYTES)
+  _write_padded(fid, edf_in.header.digital_min, EDF_VALUE_BYTES)
+  _write_padded(fid, edf_in.header.digital_max, EDF_VALUE_BYTES)
+  _write_padded(fid, edf_in.header.pre_filter, EDF_FILTER_BYTES)
+  _write_padded(fid, edf_in.header.num_samples, EDF_SAMPLES_BYTES)
+  _write_padded(fid, edf_in.header.reserved, EDF_RESERVED_BYTES)
 
   data = round.(Int32, ((edf_in.data .- transpose(edf_in.header.offset[1:end-1])) ./ transpose(edf_in.header.scale_factor[1:end-1])))
   trigs = edf_in.triggers.raw
@@ -200,6 +200,20 @@ function write_edf(edf_in::EdfData, filename::AbstractString="")
   write(fid, Array{UInt8}(edf))
   close(fid)
 
+end
+
+
+# Internal helpers for zero-allocation byte writing
+function _write_bytes(fid::IO, data)
+  for b in data
+    write(fid, UInt8(b))
+  end
+end
+
+function _write_padded(fid::IO, values, pad_length)
+  for val in values
+    _write_bytes(fid, rpad(val, pad_length))
+  end
 end
 
 

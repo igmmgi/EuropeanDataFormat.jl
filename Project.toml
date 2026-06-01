@@ -1,17 +1,19 @@
 name = "EuropeanDataFormat"
 uuid = "6e7d3c7c-811f-4696-823f-91ac5a3cab82"
-authors = ["igmmgi <ian.mackenzie@uni-tuebingen.de>, Carolin Dudschig <carolin.dudschig@uni-tuebingen.de"]
-version = "0.1.1"
 license = "MIT"
+version = "0.1.1"
+authors = ["igmmgi <ian.mackenzie@uni-tuebingen.de>, Carolin Dudschig <carolin.dudschig@uni-tuebingen.de"]
 
 [deps]
 DSP = "717857b8-e6f2-59f4-9121-6e50c889abd2"
+JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
 OrderedCollections = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
 
 [compat]
-julia = "1.10"
 DSP = "0.8"
+JSON3 = "1.14.3"
 OrderedCollections = "1.4"
+julia = "1.10"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
