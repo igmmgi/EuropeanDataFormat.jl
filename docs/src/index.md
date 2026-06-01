@@ -6,14 +6,6 @@ A Julia package for reading, writing, and processing EDF/EDF+ EEG data files.
 
 EDF (European Data Format) files store 16-bit EEG data with metadata including channel information, sampling rates, and trigger events. This package provides comprehensive functionality to work with these files in Julia.
 
-## Features
-
-- **File I/O**: Read and write Edf (\*.edf) files
-- **Basic Data Processing**: Crop, downsample, and merge data
-- **Channel Management**: Select, delete, and manipulate channels
-- **Trigger Analysis**: Extract and analyze trigger events
-- **Status Channel**: Handle EDF status channel information
-
 ## Quick Start
 
 ```julia
