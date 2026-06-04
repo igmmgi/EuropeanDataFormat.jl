@@ -29,7 +29,7 @@ select_channels_edf!(dat, [1, "Fp1"])
 
 # Notes
 - Modifies the original data structure
-- The status/trigger channel is always included automatically
+- The status/trigger channel is always included automatically when present
 - Updates header information (num_channels, channel_labels, etc.)
 - Channel indices are 1-based
 - Use `select_channels_edf` for non-mutating version
@@ -41,9 +41,13 @@ select_channels_edf!(dat, [1, "Fp1"])
 """
 function select_channels_edf!(edf::EdfData, channels::Union{Vector{Int}, Vector{String}})
   @info "Selecting channels: $channels"
-  channels = channel_index(edf.header.channel_labels, channels)
-  update_header_edf!(edf.header, channels)
-  edf.data = edf.data[:, channels[1:end-1]]
+  status_idx = _find_status_index(edf.header.channel_labels)
+  selected = channel_index(edf.header.channel_labels, channels, status_idx)
+  # Map header indices to data matrix columns (data excludes status channel)
+  data_indices = status_idx > 0 ? filter(!=(status_idx), 1:length(edf.header.channel_labels)) : collect(1:length(edf.header.channel_labels))
+  data_cols = [findfirst(==(idx), data_indices) for idx in selected if idx != status_idx]
+  edf.data = edf.data[:, data_cols]
+  update_header_edf!(edf.header, selected)
 end
 
 # Convenience methods for single inputs
@@ -126,10 +130,14 @@ delete_channels_edf!(dat, [2, "Fp2"])
 """
 function delete_channels_edf!(edf::EdfData, channels::Union{Vector{Int}, Vector{String}})
   @info "Deleting channels: $channels"
-  channels = channel_index(edf.header.channel_labels, channels)
-  channels = filter(x -> !(x in channels[1:end-1]), 1:length(edf.header.channel_labels))
-  update_header_edf!(edf.header, channels)
-  edf.data = edf.data[:, channels[1:end-1]]
+  status_idx = _find_status_index(edf.header.channel_labels)
+  to_delete = channel_index(edf.header.channel_labels, channels, 0)  # Don't auto-include status in delete set
+  to_keep = filter(x -> x ∉ to_delete, 1:length(edf.header.channel_labels))
+  # Map header indices to data matrix columns (data excludes status channel)
+  data_indices = status_idx > 0 ? filter(!=(status_idx), 1:length(edf.header.channel_labels)) : collect(1:length(edf.header.channel_labels))
+  data_cols = [findfirst(==(idx), data_indices) for idx in to_keep if idx != status_idx]
+  edf.data = edf.data[:, data_cols]
+  update_header_edf!(edf.header, to_keep)
 end
 
 # Convenience methods for single inputs
@@ -175,78 +183,74 @@ delete_channels_edf(edf_in::EdfData, channels::Union{Int,String}) = delete_chann
 
 
 """
-    channel_index(labels, channels)
+    channel_index(labels, channels, status_idx=0)
 
 Convert channel specifications to channel indices.
-
-# Examples
-```julia
-# Single channel by label
-idx = channel_index(["A1", "A2", "A3"], "A2")  # Returns [2, 3]
-
-# Single channel by index
-idx = channel_index(["A1", "A2", "A3"], 2)     # Returns [2, 3]
-
-# Multiple channels by index
-idx = channel_index(["A1", "A2", "A3"], [1, 3])  # Returns [1, 3, 3]
-
-# Multiple channels by label
-idx = channel_index(["A1", "A2", "A3"], ["A1", "A3"])  # Returns [1, 3, 3]
-
-# Mixed types
-idx = channel_index(["A1", "A2", "A3"], [1, "A2"])  # Returns [1, 2, 3]
-
-# Trigger channel only
-idx = channel_index(["A1", "A2", "A3"], [-1])  # Returns [3, 3]
-```
 
 # Arguments
 - `labels::Vector{<:AbstractString}`: Available channel labels
 - `channels::Union{Vector{<:Union{Int,String}}, Int, String}`: Channel specifications
+- `status_idx::Int=0`: Index of the status/trigger channel (0 = none)
 
 # Returns
-- `Vector{Int}`: Channel indices including the status channel
+- `Vector{Int}`: Channel indices, including the status channel if present
 
 # Notes
 - This is an internal function used by other functions
 - Channel indices are 1-based
-- The status channel is always included automatically
-- Returns indices in the order specified
-- Useful for channel selection and deletion operations
+- The status channel is automatically included when `status_idx > 0`
+- `-1` in integer channels maps to the status channel
 """
 
 
+"""
+    _find_status_index(labels)
+
+Find the index of the Status/trigger channel in channel labels.
+Returns 0 if no Status channel is found.
+"""
+function _find_status_index(labels::Vector{<:AbstractString})
+  idx = findlast(x -> x == "Status", labels)
+  return idx === nothing ? 0 : idx
+end
+
+
 # Handle SubString types and other AbstractString types
-function channel_index(labels::Vector{<:AbstractString}, channels::Array{String})
+function channel_index(labels::Vector{<:AbstractString}, channels::Array{String}, status_idx::Int=0)
   channel_idx = Int[]
   for chan in channels
     idx = findfirst(x -> x == chan, labels)
     idx === nothing && error("Channel label $chan not found!")
     push!(channel_idx, idx)
   end
-  # add status channel if not already included
-  if length(labels) ∉ channel_idx
-    push!(channel_idx, length(labels))
+  # add status channel if present and not already included
+  if status_idx > 0 && status_idx ∉ channel_idx
+    push!(channel_idx, status_idx)
   end
   return sort(unique(channel_idx))
 end
 
-function channel_index(labels::Vector{<:AbstractString}, channels::Array{Int})
-  trigSelected = findall(x -> x == -1, channels)
-  if length(trigSelected) > 0
-    channels[trigSelected] = repeat([length(labels)], length(trigSelected))
+function channel_index(labels::Vector{<:AbstractString}, channels::Array{Int}, status_idx::Int=0)
+  # Map -1 to the status channel
+  if status_idx > 0
+    trigSelected = findall(x -> x == -1, channels)
+    if length(trigSelected) > 0
+      channels[trigSelected] = repeat([status_idx], length(trigSelected))
+    end
   end
+  # Remove any remaining -1s (no status channel available)
+  channels = filter(x -> x != -1, channels)
   any(channels .> length(labels)) && error("Requested channel number greater than number of channels in file!")
   any(channels .< 1) && error("Requested channel number less than 1!")
-  # add status channel if not already included
-  if length(labels) ∉ channels
-    push!(channels, length(labels))
+  # add status channel if present and not already included
+  if status_idx > 0 && status_idx ∉ channels
+    push!(channels, status_idx)
   end
   return sort(unique(channels))
 end
 
 # Convenience methods for single inputs
-channel_index(labels::Vector{<:AbstractString}, channels::String) = channel_index(labels, [channels])
-channel_index(labels::Vector{<:AbstractString}, channels::Int) = channel_index(labels, [channels])
+channel_index(labels::Vector{<:AbstractString}, channels::String, status_idx::Int=0) = channel_index(labels, [channels], status_idx)
+channel_index(labels::Vector{<:AbstractString}, channels::Int, status_idx::Int=0) = channel_index(labels, [channels], status_idx)
 
 

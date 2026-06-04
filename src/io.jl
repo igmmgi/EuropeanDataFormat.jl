@@ -55,6 +55,8 @@ dat = read_edf("data.edf", channels=[1, "Fp1", -1])
 - Trigger information is extracted from the status channel
 - File format follows [EDF EDF specification](https://www.edf.com/faq_file_format.htm)
 - The EDF/EDF+ specification allows different channels to have different sampling rates. When reading files with mixed sampling rates, the package automatically upsamples slower channels to match the highest sampling rate in the file.
+- EDF Annotations channels (EDF+) are automatically detected and excluded from data/triggers.
+  Trigger extraction uses the "Status" channel when present.
 
 # See also
 - `write_edf`: Write data back to EDF format
@@ -80,39 +82,86 @@ function read_edf(filename::AbstractString; header_only::Bool=false, channels=[]
   data_format = strip(String(read!(fid, Array{UInt8}(undef, EDF_DATA_FORMAT_BYTES))))
   num_data_records = parse(Int, String(read!(fid, Array{UInt8}(undef, EDF_RECORD_COUNT_BYTES))))
   duration_data_records = parse(Float64, String(read!(fid, Array{UInt8}(undef, EDF_DURATION_BYTES))))
-  num_channels = parse(Int, String(read!(fid, Array{UInt8}(undef, EDF_CHANNEL_COUNT_BYTES))))
-  channel_labels = [strip(String(read!(fid, Array{UInt8}(undef, EDF_CHANNEL_LABEL_BYTES)))) for _ in 1:num_channels]
-  transducer_type = [strip(String(read!(fid, Array{UInt8}(undef, EDF_TRANSDUCER_BYTES)))) for _ in 1:num_channels]
-  channel_unit = [strip(String(read!(fid, Array{UInt8}(undef, EDF_UNIT_BYTES)))) for _ in 1:num_channels]
-  physical_min = parse.(Float32, [String(read!(fid, Array{UInt8}(undef, EDF_VALUE_BYTES))) for _ in 1:num_channels])
-  physical_max = parse.(Float32, [String(read!(fid, Array{UInt8}(undef, EDF_VALUE_BYTES))) for _ in 1:num_channels])
-  digital_min = parse.(Float32, [String(read!(fid, Array{UInt8}(undef, EDF_VALUE_BYTES))) for _ in 1:num_channels])
-  digital_max = parse.(Float32, [String(read!(fid, Array{UInt8}(undef, EDF_VALUE_BYTES))) for _ in 1:num_channels])
-  pre_filter = [strip(String(read!(fid, Array{UInt8}(undef, EDF_FILTER_BYTES)))) for _ in 1:num_channels]
-  num_samples = parse.(Int, [String(read!(fid, Array{UInt8}(undef, EDF_SAMPLES_BYTES))) for _ in 1:num_channels])
-  reserved = [String(read!(fid, Array{UInt8}(undef, EDF_RESERVED_BYTES))) for _ in 1:num_channels]
-  scale_factor = convert(Array{Float32}, ((physical_max .- physical_min) ./ (digital_max .- digital_min)))
-  offset = convert(Array{Float32}, physical_max .- scale_factor .* digital_max)
-  sample_rate = convert(Array{Int}, round.(Int, num_samples ./ duration_data_records))
+  num_channels_file = parse(Int, String(read!(fid, Array{UInt8}(undef, EDF_CHANNEL_COUNT_BYTES))))
+  channel_labels = [strip(String(read!(fid, Array{UInt8}(undef, EDF_CHANNEL_LABEL_BYTES)))) for _ in 1:num_channels_file]
+  transducer_type = [strip(String(read!(fid, Array{UInt8}(undef, EDF_TRANSDUCER_BYTES)))) for _ in 1:num_channels_file]
+  channel_unit = [strip(String(read!(fid, Array{UInt8}(undef, EDF_UNIT_BYTES)))) for _ in 1:num_channels_file]
+  physical_min = parse.(Float32, [String(read!(fid, Array{UInt8}(undef, EDF_VALUE_BYTES))) for _ in 1:num_channels_file])
+  physical_max = parse.(Float32, [String(read!(fid, Array{UInt8}(undef, EDF_VALUE_BYTES))) for _ in 1:num_channels_file])
+  digital_min = parse.(Float32, [String(read!(fid, Array{UInt8}(undef, EDF_VALUE_BYTES))) for _ in 1:num_channels_file])
+  digital_max = parse.(Float32, [String(read!(fid, Array{UInt8}(undef, EDF_VALUE_BYTES))) for _ in 1:num_channels_file])
+  pre_filter = [strip(String(read!(fid, Array{UInt8}(undef, EDF_FILTER_BYTES)))) for _ in 1:num_channels_file]
+  num_samples = parse.(Int, [String(read!(fid, Array{UInt8}(undef, EDF_SAMPLES_BYTES))) for _ in 1:num_channels_file])
+  reserved = [String(read!(fid, Array{UInt8}(undef, EDF_RESERVED_BYTES))) for _ in 1:num_channels_file]
+
+  # Detect EDF Annotations channel(s) and Status channel
+  annotations_idx = findall(x -> x == "EDF Annotations", channel_labels)
+  status_idx = findlast(x -> x == "Status", channel_labels)
+
+  # Determine which channels are "real" data channels (excluding annotations)
+  # and which channel serves as the trigger/status source
+  if !isempty(annotations_idx)
+    # EDF+ file: annotations channels are not data channels
+    # Keep all non-annotation channels for data
+    keep_indices = setdiff(1:num_channels_file, annotations_idx)
+  else
+    keep_indices = 1:num_channels_file
+  end
+
+  # Determine the trigger source channel (in the original file indexing)
+  # Only use an explicit "Status" channel — never assume the last channel is status
+  if status_idx !== nothing && status_idx ∉ annotations_idx
+    trigger_source_idx = status_idx
+  else
+    trigger_source_idx = 0
+  end
+
+  # Build header with only the kept channels
+  num_channels = length(keep_indices)
+  kl = keep_indices  # shorthand
+  channel_labels_kept = channel_labels[kl]
+  transducer_type_kept = transducer_type[kl]
+  channel_unit_kept = channel_unit[kl]
+  physical_min_kept = physical_min[kl]
+  physical_max_kept = physical_max[kl]
+  digital_min_kept = digital_min[kl]
+  digital_max_kept = digital_max[kl]
+  pre_filter_kept = pre_filter[kl]
+  num_samples_kept = num_samples[kl]
+  reserved_kept = reserved[kl]
+
+  scale_factor = convert(Array{Float32}, ((physical_max_kept .- physical_min_kept) ./ (digital_max_kept .- digital_min_kept)))
+  offset = convert(Array{Float32}, physical_max_kept .- scale_factor .* digital_max_kept)
+  sample_rate = convert(Array{Int}, round.(Int, num_samples_kept ./ duration_data_records))
 
   hd = EdfHeader(id1, id2, text1, text2, start_date, start_time, num_bytes_header, data_format,
-    num_data_records, duration_data_records, num_channels, channel_labels, transducer_type,
-    channel_unit, physical_min, physical_max, digital_min, digital_max, pre_filter,
-    num_samples, reserved, scale_factor, offset, sample_rate)
+    num_data_records, duration_data_records, num_channels, channel_labels_kept, transducer_type_kept,
+    channel_unit_kept, physical_min_kept, physical_max_kept, digital_min_kept, digital_max_kept, pre_filter_kept,
+    num_samples_kept, reserved_kept, scale_factor, offset, sample_rate)
 
   if header_only
     close(fid)
     return hd
   end
 
-  # read data
-  edf = read!(fid, Array{UInt8}(undef, EDF_SAMPLES_PER_BYTE * num_data_records * sum(num_samples)))
+  # read data — must read ALL channels from file (including annotations) to maintain byte offsets
+  edf_uint8 = read!(fid, Array{UInt8}(undef, EDF_SAMPLES_PER_BYTE * num_data_records * sum(num_samples)))
   close(fid)
+  edf = reinterpret(Int16, edf_uint8)
 
-  channels = !isempty(channels) ? channel_index(channel_labels, channels) : 1:num_channels
+  # Find the trigger source index within the kept channels
+  trigger_kept_idx = trigger_source_idx > 0 ? findfirst(==(trigger_source_idx), collect(keep_indices)) : 0
 
-  dat, time, trig, status = edf2matrix(edf, num_channels, channels, scale_factor, offset, num_data_records, num_samples, sample_rate[1])
-  channels != 1:num_channels && update_header_edf!(hd, channels)
+  # Map user-requested channels from kept indices to file indices
+  if !isempty(channels)
+    user_channels = channel_index(channel_labels_kept, channels, trigger_kept_idx)
+  else
+    user_channels = 1:num_channels
+  end
+
+  dat, time, trig, status = edf2matrix(edf, keep_indices, user_channels,
+    scale_factor, offset, num_data_records, num_samples, sample_rate[1], trigger_kept_idx)
+  user_channels != 1:num_channels && update_header_edf!(hd, collect(user_channels))
 
   triggers = trigger_info(trig, sample_rate[1])
 
@@ -188,16 +237,24 @@ function write_edf(edf_in::EdfData, filename::AbstractString="")
   _write_padded(fid, edf_in.header.num_samples, EDF_SAMPLES_BYTES)
   _write_padded(fid, edf_in.header.reserved, EDF_RESERVED_BYTES)
 
-  data = round.(Int32, ((edf_in.data .- transpose(edf_in.header.offset[1:end-1])) ./ transpose(edf_in.header.scale_factor[1:end-1])))
+  # Determine which header channels are data channels (not Status)
+  status_idx = _find_status_index(edf_in.header.channel_labels)
+  if status_idx > 0
+    data_chan_indices = filter(!=(status_idx), 1:edf_in.header.num_channels)
+  else
+    data_chan_indices = 1:edf_in.header.num_channels
+  end
+
+  data = round.(Int32, ((edf_in.data .- transpose(edf_in.header.offset[data_chan_indices])) ./ transpose(edf_in.header.scale_factor[data_chan_indices])))
   trigs = edf_in.triggers.raw
   num_data_records = edf_in.header.num_data_records
   num_samples = edf_in.header.num_samples
   num_channels = edf_in.header.num_channels
 
-  edf = matrix2edf(data, trigs, num_data_records, num_samples, num_channels)
+  edf = matrix2edf(data, trigs, num_data_records, num_samples, num_channels, status_idx)
 
   @info "Writing file: $filename"
-  write(fid, Array{UInt8}(edf))
+  write(fid, reinterpret(UInt8, edf))
   close(fid)
 
 end
@@ -218,19 +275,20 @@ end
 
 
 """
-    edf2matrix(edf, num_channels, channels, scale_factor, num_data_records, num_samples, sample_rate)
+    edf2matrix(edf, keep_indices, user_channels, scale_factor, offset, num_data_records, num_samples, sample_rate, trigger_kept_idx)
 
 Convert raw EDF binary data to Julia data matrix and extract trigger information.
 
 # Arguments
-- `edf::Vector{UInt8}`: Raw binary data from EDF file
-- `num_channels::Int`: Total number of channels in file
-- `channels::Vector{Int}`: Selected channel indices (including status channel)
-- `scale_factor::Vector{Float32}`: Scale factors for each channel
-- `offset::Vector{Float32}`: Offsets for each channel
+- `edf::AbstractVector{Int16}`: Raw 16-bit binary EDF data
+- `keep_indices::Union{Vector{Int},UnitRange{Int}}`: Indices of non-annotation channels in the file
+- `user_channels::Union{Vector{Int},UnitRange{Int}}`: User-selected channel indices within keep_indices
+- `scale_factor::Vector{Float32}`: Scale factors for each kept channel
+- `offset::Vector{Float32}`: Offsets for each kept channel
 - `num_data_records::Int`: Number of data records
-- `num_samples::Int`: Number of samples per record per channel
+- `num_samples::Vector{Int}`: Number of samples per record per file channel
 - `sample_rate::Int`: Sampling rate in Hz
+- `trigger_kept_idx::Int`: Index of trigger channel within keep_indices (0 = no trigger channel)
 
 # Returns
 - `dat_chans::Matrix{Float32}`: Scaled EEG data matrix (samples × channels)
@@ -241,59 +299,75 @@ Convert raw EDF binary data to Julia data matrix and extract trigger information
 # Notes
 - Converts 16-bit EDF format to 32-bit float data
 - Automatically applies scale factors for physical units
-- Extracts trigger and status information from the last channel
+- Extracts trigger and status information from the designated status channel
 - Time vector starts at 0 and increments by 1/sample_rate
 - This is an internal function used by `read_edf`
 """
-function edf2matrix(edf, num_channels, channels, scale_factor, offset_factor, num_data_records, num_samples::Vector{Int}, sample_rate)
+function edf2matrix(edf::AbstractVector{Int16}, keep_indices, user_channels,
+    scale_factor, offset_factor, num_data_records, num_samples::Vector{Int},
+    sample_rate, trigger_kept_idx::Int)
 
-  target_samples = num_samples[1]
-  dat_chans = Matrix{Float32}(undef, (num_data_records * target_samples), length(channels) - 1)
+  target_samples = num_samples[collect(keep_indices)[1]]
+  total_samples = num_data_records * target_samples
+
+  # Count data channels (non-trigger channels that user requested)
+  user_set = Set(user_channels)
+  n_data_chans = trigger_kept_idx > 0 ? count(c -> c != trigger_kept_idx && c in user_set, 1:length(keep_indices)) :
+                                         count(c -> c in user_set, 1:length(keep_indices))
+
+  dat_chans = Matrix{Float32}(undef, total_samples, n_data_chans)
   time = time_range(sample_rate, num_data_records)
-  trig_chan = Vector{Int16}(undef, num_data_records * target_samples)
-  status_chan = zeros(Int16, num_data_records * target_samples)
+  
+  if trigger_kept_idx > 0
+    trig_chan = Vector{Int16}(undef, total_samples)
+  else
+    trig_chan = zeros(Int16, total_samples)
+  end
+  status_chan = zeros(Int16, total_samples)
 
-  # Use Set for faster channel lookup
-  channels_set = Set(channels)
+  # Precompute channel Int16 offsets within a record (using FILE channel indices)
+  chan_offsets = cumsum([0; num_samples[1:end-1]])
+  samples_per_record = sum(num_samples)
 
-  # Precompute channel byte offsets within a record
-  chan_byte_offsets = cumsum([0; num_samples[1:end-1]]) .* EDF_SAMPLES_PER_BYTE
-  bytes_per_record = sum(num_samples) * EDF_SAMPLES_PER_BYTE
+  # Build mapping: for each kept channel, what is its file index and kept index?
+  keep_vec = collect(keep_indices)
 
   for rec = 0:(num_data_records-1)
-    rec_offset_bytes = rec * bytes_per_record
-    offset = rec * target_samples
-    chan_idx = 1
-    
-    for chan = 1:num_channels
-      if chan in channels_set
-        n_samp = num_samples[chan]
-        pos = 1 + rec_offset_bytes + chan_byte_offsets[chan]
-        
-        if chan < num_channels
-          sf = scale_factor[chan]
-          of = offset_factor[chan]
-          last_val = 0.0f0
-          @simd for samp = 1:min(n_samp, target_samples)
-            last_val = Float32(Int16(edf[pos]) | (Int16(edf[pos+1]) << 8)) * sf + of
-            @inbounds dat_chans[offset+samp, chan_idx] = last_val
-            pos += EDF_SAMPLES_PER_BYTE
-          end
-          for samp = n_samp+1:target_samples
-            @inbounds dat_chans[offset+samp, chan_idx] = last_val
-          end
-        else  # last channel is always Status channel
-          last_trig = Int16(0)
-          @simd for samp = 1:min(n_samp, target_samples)
-            last_trig = Int16(edf[pos]) | (Int16(edf[pos+1]) << 8)
-            @inbounds trig_chan[offset+samp] = last_trig
-            pos += EDF_SAMPLES_PER_BYTE
-          end
-          for samp = n_samp+1:target_samples
-            @inbounds trig_chan[offset+samp] = last_trig
-          end
+    rec_offset = rec * samples_per_record
+    data_offset = rec * target_samples
+    dat_col = 0
+
+    for (kept_idx, file_chan) in enumerate(keep_vec)
+      kept_idx in user_set || continue
+
+      n_samp = num_samples[file_chan]
+      pos = 1 + rec_offset + chan_offsets[file_chan]
+
+      if kept_idx == trigger_kept_idx
+        # This is the trigger/status channel
+        last_trig = Int16(0)
+        @inbounds for samp = 1:min(n_samp, target_samples)
+          last_trig = ltoh(edf[pos])
+          trig_chan[data_offset+samp] = last_trig
+          pos += 1
         end
-        chan_idx += 1
+        @inbounds for samp = n_samp+1:target_samples
+          trig_chan[data_offset+samp] = last_trig
+        end
+      else
+        # Data channel
+        dat_col += 1
+        sf = scale_factor[kept_idx]
+        of = offset_factor[kept_idx]
+        last_val = 0.0f0
+        @inbounds for samp = 1:min(n_samp, target_samples)
+          last_val = Float32(ltoh(edf[pos])) * sf + of
+          dat_chans[data_offset+samp, dat_col] = last_val
+          pos += 1
+        end
+        @inbounds for samp = n_samp+1:target_samples
+          dat_chans[data_offset+samp, dat_col] = last_val
+        end
       end
     end
   end
@@ -330,43 +404,43 @@ Convert Julia data matrix back to EDF 16-bit binary format.
 - Applies inverse scaling to restore original digital values
 - Maintains EDF file structure and byte ordering
 """
-function matrix2edf(data, trigs, num_data_records, num_samples::Vector{Int}, num_channels)
-  edf = Array{UInt8}(undef, EDF_SAMPLES_PER_BYTE * num_data_records * sum(num_samples))
+function matrix2edf(data, trigs, num_data_records, num_samples::Vector{Int}, num_channels, status_idx::Int=0)
+  edf = Array{Int16}(undef, num_data_records * sum(num_samples))
   target_samples = num_samples[1]
-  bytes_per_record = sum(num_samples) * EDF_SAMPLES_PER_BYTE
-  chan_byte_offsets = cumsum([0; num_samples[1:end-1]]) .* EDF_SAMPLES_PER_BYTE
+  samples_per_record = sum(num_samples)
+  chan_offsets = cumsum([0; num_samples[1:end-1]])
 
   for rec = 0:(num_data_records-1)
-    rec_offset_bytes = rec * bytes_per_record
+    rec_offset = rec * samples_per_record
     offset = rec * target_samples
+    data_col = 0
 
     for chan = 1:num_channels
       n_samp = num_samples[chan]
-      pos = 1 + rec_offset_bytes + chan_byte_offsets[chan]
+      pos = 1 + rec_offset + chan_offsets[chan]
 
-      if chan < num_channels
-        @simd for samp = 1:min(n_samp, target_samples)
-          data_val = data[offset+samp, chan]
-          @inbounds edf[pos] = (data_val % UInt8)
-          @inbounds edf[pos+1] = ((data_val >> 8) % UInt8)
-          pos += EDF_SAMPLES_PER_BYTE
-        end
-        for _ in target_samples+1:n_samp
-          @inbounds edf[pos] = 0x00
-          @inbounds edf[pos+1] = 0x00
-          pos += EDF_SAMPLES_PER_BYTE
-        end
-      else  # last channel is Status channel
-        @simd for samp = 1:min(n_samp, target_samples)
+      if chan == status_idx
+        # Status/trigger channel
+        @inbounds for samp = 1:min(n_samp, target_samples)
           trig_val = trigs[offset+samp]
-          @inbounds edf[pos] = trig_val % UInt8
-          @inbounds edf[pos+1] = (trig_val >> 8) % UInt8
-          pos += EDF_SAMPLES_PER_BYTE
+          edf[pos] = htol(Int16(trig_val))
+          pos += 1
         end
-        for _ in target_samples+1:n_samp
-          @inbounds edf[pos] = 0x00
-          @inbounds edf[pos+1] = 0x00
-          pos += EDF_SAMPLES_PER_BYTE
+        @inbounds for _ in target_samples+1:n_samp
+          edf[pos] = 0x0000
+          pos += 1
+        end
+      else
+        # Data channel
+        data_col += 1
+        @inbounds for samp = 1:min(n_samp, target_samples)
+          data_val = data[offset+samp, data_col]
+          edf[pos] = htol(Int16(data_val))
+          pos += 1
+        end
+        @inbounds for _ in target_samples+1:n_samp
+          edf[pos] = 0x0000
+          pos += 1
         end
       end
     end
